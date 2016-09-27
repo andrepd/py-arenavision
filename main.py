@@ -31,13 +31,8 @@ class TableParser(HTMLParser):
 			self.inTable = False
 			return
 		if tag == 'tr' and self.inLine:
-			#print(self.data)
-			#print(self.temp)
 			self.data.append(self.temp)
 			self.temp = []
-			#print(self.data)
-			#print(self.temp)
-			#print('-----')
 			self.inLine = False
 			return
 		if tag == 'td' and self.recording:
@@ -66,11 +61,13 @@ class LinksParser(HTMLParser):
 	def handle_data(self, data):
 		pass
 
-#Event = namedtuple('Event', 'time, sport, competition, event, live_chan, live_lang')
 
+#TODO
 class Channel(namedtuple('Channel', 'number, lang')):
 	def __str__(self):
 		return '{} [{}]'.format(no, lang)
+
+#Event = namedtuple('Event', 'time, sport, competition, event, live_chan, live_lang')
 
 class Event(namedtuple('Event', 'time, sport, competition, event, live_chan, live_lang')):
 	#__slots__ = ()
@@ -81,7 +78,6 @@ class Event(namedtuple('Event', 'time, sport, competition, event, live_chan, liv
 			'Event: {}\n').format(self.time, self.sport, self.competition, self.event)
 			#'Channels: {}',
 			#'Language: {}'
-		
 
 def parse_raw_list(l):
 	l = [[x.strip() for x in y] for y in l]
@@ -114,40 +110,6 @@ def parse_raw_list(l):
 		ret.append(Event(time, sport, competition, event, live_chan, live_lang))
 	return ret
 
-	#return [(datetime.date(x[0], x[1],) for x in l]
-
-#with urllib.request.urlopen('http://arenavision.in/agenda/') as response:
-#    html = response.read()
-#    print(html)
-	
-	
-site = 'http://arenavision.in/'
-
-req = urllib.request.Request(site+'agenda', headers={'User-Agent': 'Mozilla/5.0'})
-webpage = urllib.request.urlopen(req).read()
-#print(webpage)
-
-parser = TableParser()
-parser.feed(str(webpage))
-
-#for i in parser.data:
-#    try:
-#        print(i[0])
-#    except IndexError:
-#        pass
-	
-d = parse_raw_list(parser.data)
-
-#for i in d:
-#    print(i)
-
-futebole = [x for x in d if x.sport == 'SOCCER']
-benfiques = [x for x in d if 'BENFICA' in x.event]
-
-#for i in futebole: print(i)
-#print('---')
-for i in benfiques: print(i)
-
 def get_links(ev):
 	ch = ev.live_chan
 	#ch = [ for x in ch]
@@ -160,12 +122,43 @@ def get_links(ev):
 		ret.append(parser.url)
 	return ret
 
-links_pro_benfiques = [get_links(x) for x in benfiques]
 
-for i in links_pro_benfiques:
-	print(i)
-	
+if __name__ == '__main__':
+	site = 'http://arenavision.in/'
+
+	req = urllib.request.Request(site+'agenda', headers={'User-Agent': 'Mozilla/5.0'})
+	webpage = urllib.request.urlopen(req).read()
+	#print(webpage)
+
+	parser = TableParser()
+	parser.feed(str(webpage))
+
+	#for i in parser.data:
+	#    try:
+	#        print(i[0])
+	#    except IndexError:
+	#        pass
+		
+	d = parse_raw_list(parser.data)
+
+	#for i in d:
+	#    print(i)
+
+	futebole = [x for x in d if x.sport == 'SOCCER']
+	benfiques = [x for x in d if 'BENFICA' in x.event]
+
+	#for i in futebole: print(i)
+	#print('---')
+	#for i in benfiques: print(i)
+
+	links_pro_benfiques = [get_links(x) for x in benfiques]
+
+	for i in links_pro_benfiques:
+		print(i)
+
+	#urllib.request.urlopen(links_pro_benfiques[0][0])
+		
 ## TODO
-# Event pretty printing
+# ~Event pretty printing~
 # Cleanup
 # Cache stuff for performance
