@@ -80,8 +80,6 @@ class Channel(namedtuple('Channel', 'chan, lang')):
 	def __str__(self):
 		return '{} [{}]'.format(self.chan, self.lang)
 
-#Event = namedtuple('Event', 'time, sport, competition, event, live_chan, live_lang')
-
 class Event(namedtuple('Event', 'time, sport, competition, event, live')):
 	#__slots__ = ()
 	def __str__(self):
@@ -97,7 +95,7 @@ def parse_raw_list(l):
 	l = [[x.strip().replace('\\n\\t\\t', ' ') for x in y] for y in l]
 	ret = []
 	for i in l:
-		print(i)
+		#print(i)
 		#print(len(i))
 		if len(i) != 6:
 			continue
@@ -109,7 +107,8 @@ def parse_raw_list(l):
 		try:
 			time = datetime.datetime.strptime(time, '%d/%m/%Y %H:%M %z')# %Z')
 		except ValueError:
-			print('Error in line {}'.format(i))
+			# quietly ignore
+			#print('Error in line {}'.format(i))
 			continue
 		sport = i[2]
 		competition = i[3]
@@ -117,7 +116,7 @@ def parse_raw_list(l):
 		if '-' in event:
 			event = event.split('-')
 			event = (event[0], event[1])
-		print(i[5], 'END')
+		#print(i[5], 'END')
 		
 		i[5] = i[5].split()
 		live = []
@@ -132,17 +131,13 @@ def parse_raw_list(l):
 		ret.append(Event(time, sport, competition, event, live))
 	return ret
 
-def get_links(ev):
-	ch = ev.live
-	#ch = [ for x in ch]
-	ret = []
-	for c,l in ch:
-		req = urllib.request.Request('{}av{}'.format(site, c), headers={'User-Agent': 'Mozilla/5.0'})
-		webpage = urllib.request.urlopen(req).read()        
-		parser = LinksParser()
-		parser.feed(str(webpage))
-		ret.append(parser.url)
-	return ret
+def get_link(ch):
+	c = ch.chan
+	req = urllib.request.Request('{}av{}'.format(site, c), headers={'User-Agent': 'Mozilla/5.0'})
+	webpage = urllib.request.urlopen(req).read()        
+	parser = LinksParser()
+	parser.feed(str(webpage))
+	return parser.url
 
 
 if __name__ == '__main__':
@@ -173,7 +168,7 @@ if __name__ == '__main__':
 	#print('---')
 	for i in benfiques: print(i)
 
-	links_pro_benfiques = [get_links(x) for x in benfiques]
+	links_pro_benfiques = [get_link(y) for x in benfiques for y in x.live]
 
 	for i in links_pro_benfiques:
 		print(i)
