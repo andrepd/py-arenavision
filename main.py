@@ -9,8 +9,10 @@ class TableParser(HTMLParser):
 		self.inTable = False
 		self.inLine = False
 		self.recording = False
+		#self.br = False
 		self.data = []
 		self.temp = []
+		self.cell = ''
 
 	def handle_starttag(self, tag, attr):
 		if (tag == 'table' and 
@@ -25,6 +27,8 @@ class TableParser(HTMLParser):
 			return
 		if self.inLine and tag == 'td':
 			self.recording = True
+		#if self.recording and tag == 'br':
+		#	self.br = True
 
 	def handle_endtag(self, tag):
 		if tag == 'table' and self.inTable:
@@ -36,12 +40,21 @@ class TableParser(HTMLParser):
 			self.inLine = False
 			return
 		if tag == 'td' and self.recording:
+			self.temp.append(self.cell)
+			self.cell = ''
 			self.recording = False
 			return
 
 	def handle_data(self, data):
 		if self.recording:
-			self.temp.append(data)
+			#if not self.br:
+			#	print(self.temp)
+			#	self.temp.append(data)
+			#elif len(self.temp) == 6:
+			#	print(data)
+			#	self.temp[-1] = self.temp[-1] + data
+			#	self.br = False
+			self.cell += data
 
 class LinksParser(HTMLParser):
 	def __init__(self):
@@ -63,26 +76,28 @@ class LinksParser(HTMLParser):
 
 
 #TODO
-class Channel(namedtuple('Channel', 'number, lang')):
+class Channel(namedtuple('Channel', 'chan, lang')):
 	def __str__(self):
-		return '{} [{}]'.format(no, lang)
+		return '{} [{}]'.format(self.chan, self.lang)
 
 #Event = namedtuple('Event', 'time, sport, competition, event, live_chan, live_lang')
 
-class Event(namedtuple('Event', 'time, sport, competition, event, live_chan, live_lang')):
+class Event(namedtuple('Event', 'time, sport, competition, event, live')):
 	#__slots__ = ()
 	def __str__(self):
 		return ('Time: {}\n'
 			'Sport: {}\n'
 			'Competition: {}\n'
-			'Event: {}\n').format(self.time, self.sport, self.competition, self.event)
+			'Event: {}\n'
+			'Channels: {}\n').format(self.time, self.sport, self.competition, self.event, ', '.join(str(x) for x in self.live))
 			#'Channels: {}',
 			#'Language: {}'
 
 def parse_raw_list(l):
-	l = [[x.strip() for x in y] for y in l]
+	l = [[x.strip().replace('\\n\\t\\t', ' ') for x in y] for y in l]
 	ret = []
 	for i in l:
+		print(i)
 		#print(len(i))
 		if len(i) != 6:
 			continue
@@ -102,20 +117,27 @@ def parse_raw_list(l):
 		if '-' in event:
 			event = event.split('-')
 			event = (event[0], event[1])
-		live_chan = i[5].split()[0]
-		live_lang = i[5].split()[1]
-		live_chan = tuple(int(x) for x in live_chan.split('-') if x[0] != 'S')
-		live_lang = live_lang[1:-1]
+		print(i[5], 'END')
+		
+		i[5] = i[5].split()
+		live = []
+		for chans, lang in zip(i[5][0::2], i[5][1::2]):
+			chans = (int(x) for x in chans.split('-') if x[0] != 'S')
+			lang = lang[1:-1]
+			for j in chans:
+				live.append(Channel(j, lang))
+			
+
 		#DONETODO converto to namedtuple
-		ret.append(Event(time, sport, competition, event, live_chan, live_lang))
+		ret.append(Event(time, sport, competition, event, live))
 	return ret
 
 def get_links(ev):
-	ch = ev.live_chan
+	ch = ev.live
 	#ch = [ for x in ch]
 	ret = []
-	for i in ch:
-		req = urllib.request.Request('{}av{}'.format(site, i), headers={'User-Agent': 'Mozilla/5.0'})
+	for c,l in ch:
+		req = urllib.request.Request('{}av{}'.format(site, c), headers={'User-Agent': 'Mozilla/5.0'})
 		webpage = urllib.request.urlopen(req).read()        
 		parser = LinksParser()
 		parser.feed(str(webpage))
@@ -149,7 +171,7 @@ if __name__ == '__main__':
 
 	#for i in futebole: print(i)
 	#print('---')
-	#for i in benfiques: print(i)
+	for i in benfiques: print(i)
 
 	links_pro_benfiques = [get_links(x) for x in benfiques]
 
